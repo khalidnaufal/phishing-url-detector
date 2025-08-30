@@ -34,5 +34,4 @@ python app.py
 
 4. Enter URLs to test phishing detection.
 
-Author
 Khalid Naufal
