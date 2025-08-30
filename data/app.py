@@ -5,7 +5,7 @@ import json
 from urllib.parse import urlparse, parse_qs
 import re
 
-# Load model and features once at startup
+# Load model and feature columns at app startup (ensure these files are in project root)
 model = joblib.load("phish_rf.joblib")
 with open("feature_columns.json") as f:
     feature_columns = json.load(f)
@@ -96,8 +96,7 @@ def is_whitelisted_domain(url):
             return True
     return False
 
-# Streamlit UI
-
+# Streamlit app UI
 st.title("Phishing URL Detector")
 
 # Sidebar author info

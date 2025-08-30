@@ -68,7 +68,7 @@ print(confusion_matrix(y_test, y_pred))
 
 # --- Save model + feature order ---
 os.makedirs("models", exist_ok=True)
-joblib.dump(clf, "models/phish_rf.joblib")
-with open("models/feature_columns.json", "w") as f:
+joblib.dump(clf, "phish_rf.joblib")
+with open("feature_columns.json", "w") as f:
     json.dump(list(X.columns), f)
 print("\n✅ Saved: models/phish_rf.joblib + models/feature_columns.json")

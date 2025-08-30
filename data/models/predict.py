@@ -8,10 +8,10 @@ import re
 print("Current working directory:", os.getcwd())
 
 # Load trained model
-model = joblib.load("phish_rf.joblib")
+model = joblib.load("../phish_rf.joblib")
 
 # Load feature columns list
-with open("feature_columns.json") as f:
+with open("../feature_columns.json") as f:
     feature_columns = json.load(f)
 
 def extract_features(url):
