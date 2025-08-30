@@ -1,27 +1,26 @@
-from flask import Flask, request, render_template
+import streamlit as st
 import joblib
 import pandas as pd
 import json
 from urllib.parse import urlparse, parse_qs
 import re
 
-app = Flask(__name__)
-
 # Load model and features once at startup
 model = joblib.load("phish_rf.joblib")
 with open("feature_columns.json") as f:
     feature_columns = json.load(f)
 
-# Known legitimate domains for brand whitelist (expand as needed)
+# Known legitimate domains whitelist
 WHITELIST_DOMAINS = [
-    "paypal.com", "paytm.com", "google.com", "microsoft.com", "amazon.com", "apple.com", "wikipedia.org"
+    "paypal.com", "paytm.com", "google.com", "microsoft.com", "amazon.com",
+    "apple.com", "wikipedia.org"
 ]
 
 def extract_features(url):
     features = {feat: 0 for feat in feature_columns}
     try:
         parsed = urlparse(url)
-    except:
+    except Exception:
         parsed = urlparse('')
 
     domain = parsed.netloc or ''
@@ -49,12 +48,13 @@ def extract_features(url):
     features["PathLevel"] = path.count('/')
     features["DoubleSlashInPath"] = 1 if "//" in path else 0
 
-    suspicious_words = ["login", "secure", "account", "update", "verify", "webscr",
-                       "signin", "bank", "confirm", "password"]
+    suspicious_words = [
+        "login", "secure", "account", "update", "verify", "webscr",
+        "signin", "bank", "confirm", "password"
+    ]
     url_lower = url.lower()
     features["NumSensitiveWords"] = sum(word in url_lower for word in suspicious_words)
 
-    # Fill zero for unavailable features to match model input shape
     zero_features = [
         "RandomString", "DomainInSubdomains", "DomainInPaths", "HttpsInHostname",
         "PctExtHyperlinks", "PctExtResourceUrls", "ExtFavicon", "InsecureForms",
@@ -90,36 +90,40 @@ def heuristic_score(url, features):
     return score
 
 def is_whitelisted_domain(url):
-    # Check if URL ends with any whitelisted domain exactly
     domain = urlparse(url).netloc.lower()
     for legit_domain in WHITELIST_DOMAINS:
         if domain == legit_domain or domain.endswith("." + legit_domain):
             return True
     return False
 
-@app.route("/", methods=["GET", "POST"])
-def home():
-    result = None
-    url = ""
-    if request.method == "POST":
-        url = request.form.get("url_input")
-        if url:
-            features = extract_features(url)
-            df = pd.DataFrame([features], columns=feature_columns)
-            prediction = model.predict(df)[0]
-            score = heuristic_score(url, features)
+# Streamlit UI
 
-            # Enhanced decision logic for phishing
-            if (
-                prediction == 1
-                or score >= 4
-                or (("paypal" in url.lower() or "paytm" in url.lower()) and not is_whitelisted_domain(url))
-                or features["NumSensitiveWords"] > 0
-            ):
-                result = f"🚨 PHISHING: {url}"
-            else:
-                result = f"✅ LEGITIMATE: {url}"
-    return render_template("index.html", result=result, url=url)
+st.title("Phishing URL Detector")
 
-if __name__ == "__main__":
-    app.run(debug=True)
+# Sidebar author info
+st.sidebar.markdown("""
+### About Author  
+**Khalid Naufal**  
+[LinkedIn Profile](https://www.linkedin.com/in/khalid-naufal-ba467a278)  
+""")
+
+url = st.text_input("Enter a URL to check for phishing:")
+
+if st.button("Check URL"):
+    if url:
+        features = extract_features(url)
+        df = pd.DataFrame([features], columns=feature_columns)
+        prediction = model.predict(df)[0]
+        score = heuristic_score(url, features)
+
+        if (
+            prediction == 1
+            or score >= 4
+            or (("paypal" in url.lower() or "paytm" in url.lower()) and not is_whitelisted_domain(url))
+            or features["NumSensitiveWords"] > 0
+        ):
+            st.error(f"🚨 PHISHING detected: {url}")
+        else:
+            st.success(f"✅ The URL appears LEGITIMATE: {url}")
+    else:
+        st.warning("Please enter a URL.")
